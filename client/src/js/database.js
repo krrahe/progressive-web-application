@@ -1,21 +1,39 @@
-import { openDB } from 'idb';
+let db;
 
-const initdb = async () =>
-  openDB('jate', 1, {
-    upgrade(db) {
-      if (db.objectStoreNames.contains('jate')) {
-        console.log('jate database already exists');
-        return;
-      }
-      db.createObjectStore('jate', { keyPath: 'id', autoIncrement: true });
-      console.log('jate database created');
-    },
-  });
+const initdb = async (dbName, storeName) => {
+  const request = indexedDB.open(dbName);
+  request.onupgradeneeded = () =>
+    request.result.createObjectStore(storeName, {
+      keyPath: "id",
+      autoIncrement: true,
+    });
+  request.onsuccess = () => (db = request.result);
+  request.onerror = () => console.error(`Error opening ${dbName} database`);
+};
 
-// TODO: Add logic to a method that accepts some content and adds it to the database
-export const putDb = async (content) => console.error('putDb not implemented');
+export const putDb = async (content, storeName) => {
+  const tx = db
+    .transaction(storeName, "readwrite")
+    .objectStore(storeName)
+    .add({ value: content });
+  tx.onsuccess = () => console.log(":)data saved to the database:)");
+  tx.onerror = (event) =>
+    console.error(
+      `    :(    Error saving data to the database:(      ) ${event.target.error}`
+    );
+};
 
-// TODO: Add logic for a method that gets all the content from the database
-export const getDb = async () => console.error('getDb not implemented');
+export const getDb = async (storeName) => {
+  const tx = db
+    .transaction(storeName, "readonly")
+    .objectStore(storeName)
+    .getAll();
+  tx.onsuccess = () => console.log(":)data read from database:)", tx.result);
+  tx.onerror = (event) =>
+    console.error(
+      `:(Error reading data from the database:(   ) ${event.target.error}`
+    );
+  return tx.result;
+};
 
-initdb();
+initdb("mydatabase", "mystore");
